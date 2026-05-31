@@ -9,6 +9,7 @@ const axios = require('axios');
 const command_Help = require('./command/help');
 const command_register = require('./command/register');
 const command_ping = require('./command/ping');
+const command_message_set = require('./command/message_set');
 
 const util = require('./utils/util');
 const db = require('./utils/db');
@@ -85,10 +86,21 @@ async function processStreamerUpdate(streamer) {
                 );
 
             for (const sub of subscriptions) {
+                if (sub.notify_type === 'live') continue;
                 try {
                     const channel = await client.channels.fetch(sub.channel_id);
                     if (channel) {
-                        await channel.send({ content: "@everyone", embeds: [embed], components: [row] });
+                        let mentionStr = '';
+                        if (sub.comm_mention_type === '@everyone') mentionStr = '@everyone ';
+                        else if (sub.comm_mention_type === '@here') mentionStr = '@here ';
+                        else if (sub.comm_mention_type === 'role' && sub.comm_mention_role_id) mentionStr = `<@&${sub.comm_mention_role_id}> `;
+
+                        let msgContent = mentionStr.trim();
+                        if (sub.comm_msg) {
+                            msgContent = msgContent ? msgContent + ' ' + sub.comm_msg.replace(/{streamer}/g, contents.name) : sub.comm_msg.replace(/{streamer}/g, contents.name);
+                        }
+
+                        await channel.send({ content: msgContent || null, embeds: [embed], components: [row] });
                     }
                 } catch (sendError) {
                     if (sendError.code === 10003) {
@@ -134,10 +146,24 @@ async function processStreamerUpdate(streamer) {
                     );
 
                 for (const sub of subscriptions) {
+                    if (sub.notify_type === 'community') continue;
                     try {
                         const channel = await client.channels.fetch(sub.channel_id);
                         if (channel) {
-                            await channel.send({ content: `@everyone ${liveInfo.channelName}님이 방송을 시작했습니다!`, embeds: [liveEmbed], components: [liveRow] });
+                            let mentionStr = '';
+                            if (sub.live_mention_type === '@everyone') mentionStr = '@everyone ';
+                            else if (sub.live_mention_type === '@here') mentionStr = '@here ';
+                            else if (sub.live_mention_type === 'role' && sub.live_mention_role_id) mentionStr = `<@&${sub.live_mention_role_id}> `;
+
+                            let msgContent = mentionStr.trim();
+                            if (sub.live_msg) {
+                                msgContent = msgContent ? msgContent + ' ' + sub.live_msg.replace(/{streamer}/g, liveInfo.channelName) : sub.live_msg.replace(/{streamer}/g, liveInfo.channelName);
+                            } else {
+                                const defaultMsg = `${liveInfo.channelName}님이 방송을 시작했습니다!`;
+                                msgContent = msgContent ? msgContent + ' ' + defaultMsg : defaultMsg;
+                            }
+
+                            await channel.send({ content: msgContent || null, embeds: [liveEmbed], components: [liveRow] });
                         }
                     } catch (sendError) {
                         if (sendError.code === 10003) {
@@ -213,6 +239,9 @@ client.on("interactionCreate", async (interaction) => {
             case "삭제":
                 const deleteInput = interaction.options.getString('스트리머');
                 await command_register.delete(interaction, deleteInput);
+                break;
+            case "알림메시지설정":
+                await command_message_set.execute(interaction);
                 break;
             case "핑":
                 await command_ping.execute(interaction);

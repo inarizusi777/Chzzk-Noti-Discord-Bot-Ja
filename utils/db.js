@@ -50,6 +50,25 @@ const init = async () => {
             FOREIGN KEY (streamer_id) REFERENCES streamers(id)
         )
     `);
+
+    // Add new columns if they do not exist
+    const alters = [
+        "ALTER TABLE subscriptions ADD COLUMN comm_mention_type TEXT DEFAULT '@everyone'",
+        "ALTER TABLE subscriptions ADD COLUMN comm_mention_role_id TEXT",
+        "ALTER TABLE subscriptions ADD COLUMN comm_msg TEXT",
+        "ALTER TABLE subscriptions ADD COLUMN live_mention_type TEXT DEFAULT '@everyone'",
+        "ALTER TABLE subscriptions ADD COLUMN live_mention_role_id TEXT",
+        "ALTER TABLE subscriptions ADD COLUMN live_msg TEXT",
+        "ALTER TABLE subscriptions ADD COLUMN notify_type TEXT DEFAULT 'all'"
+    ];
+
+    for (const sql of alters) {
+        try {
+            await dbRun(sql);
+        } catch (e) {
+            // Ignore if column already exists
+        }
+    }
 };
 
 const migrateFromJson = async (jsonPath) => {
@@ -104,13 +123,20 @@ module.exports = {
     
     // Subscription related
     getSubscriptionsForStreamer: (streamerId) => 
-        dbAll('SELECT channel_id FROM subscriptions WHERE streamer_id = ?', [streamerId]),
+        dbAll('SELECT * FROM subscriptions WHERE streamer_id = ?', [streamerId]),
     getSubscriptionsForChannel: (channelId) => 
         dbAll('SELECT s.*, st.name FROM subscriptions s JOIN streamers st ON s.streamer_id = st.id WHERE s.channel_id = ?', [channelId]),
-    addSubscription: (channelId, streamerId) => 
-        dbRun('INSERT OR IGNORE INTO subscriptions (channel_id, streamer_id) VALUES (?, ?)', [channelId, streamerId]),
+    addSubscription: (channelId, streamerId, notifyType = 'all') => 
+        dbRun('INSERT INTO subscriptions (channel_id, streamer_id, notify_type) VALUES (?, ?, ?) ON CONFLICT(channel_id, streamer_id) DO UPDATE SET notify_type = EXCLUDED.notify_type', [channelId, streamerId, notifyType]),
     removeSubscription: (channelId, streamerId) => 
         dbRun('DELETE FROM subscriptions WHERE channel_id = ? AND streamer_id = ?', [channelId, streamerId]),
+    updateSubscriptionConfig: (channelId, streamerId, type, mentionType, mentionRoleId, customMsg) => {
+        if (type === 'community') {
+            return dbRun('UPDATE subscriptions SET comm_mention_type = ?, comm_mention_role_id = ?, comm_msg = ? WHERE channel_id = ? AND streamer_id = ?', [mentionType, mentionRoleId, customMsg, channelId, streamerId]);
+        } else {
+            return dbRun('UPDATE subscriptions SET live_mention_type = ?, live_mention_role_id = ?, live_msg = ? WHERE channel_id = ? AND streamer_id = ?', [mentionType, mentionRoleId, customMsg, channelId, streamerId]);
+        }
+    },
     getSubscriptionCountForStreamer: (streamerId) =>
         dbGet('SELECT COUNT(*) as count FROM subscriptions WHERE streamer_id = ?', [streamerId]),
     removeStreamerIfNoSubs: async (streamerId) => {

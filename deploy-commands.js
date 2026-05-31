@@ -14,7 +14,16 @@ const commands = [
 		.addStringOption(option =>
 			option.setName('스트리머')
 				.setDescription('스트리머의 닉네임 또는 고유 ID를 입력하세요.')
-				.setRequired(true)),
+				.setRequired(true))
+		.addStringOption(option =>
+			option.setName('종류')
+				.setDescription('알림 받을 종류를 선택하세요. (기본값: 모두)')
+				.setRequired(false)
+				.addChoices(
+					{ name: '모두 (커뮤니티 + 방송)', value: 'all' },
+					{ name: '커뮤니티만', value: 'community' },
+					{ name: '방송시작만', value: 'live' },
+				)),
 	new SlashCommandBuilder()
 		.setName('삭제')
 		.setDescription('등록된 스트리머를 알림 리스트에서 삭제합니다.')
@@ -41,6 +50,29 @@ const commands = [
 			option.setName('주소')
 				.setDescription('새로운 API 주소를 입력하세요. ({streamerId} 또는 {keyword} 포함 필수)')
 				.setRequired(true)),
+	new SlashCommandBuilder()
+		.setName('알림메시지설정')
+		.setDescription('스트리머의 알림 멘션과 메시지를 커스텀 설정합니다.')
+		.addStringOption(option =>
+			option.setName('스트리머')
+				.setDescription('설정할 스트리머의 닉네임 또는 고유 ID를 입력하세요.')
+				.setRequired(true))
+		.addStringOption(option =>
+			option.setName('종류')
+				.setDescription('설정할 알림 종류를 선택하세요.')
+				.setRequired(true)
+				.addChoices(
+					{ name: '커뮤니티', value: 'community' },
+					{ name: '방송시작', value: 'live' },
+				))
+		.addRoleOption(option =>
+			option.setName('멘션역할')
+				.setDescription('멘션할 역할을 선택하세요. 선택 시 메시지 앞에 추가됩니다.')
+				.setRequired(false))
+		.addStringOption(option =>
+			option.setName('메시지')
+				.setDescription('알림과 함께 보낼 메시지 (마크다운 지원, {streamer} 입력 시 스트리머 이름으로 치환)')
+				.setRequired(false)),
 ].map(command => command.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(token);

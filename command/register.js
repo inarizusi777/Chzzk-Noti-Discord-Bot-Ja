@@ -128,7 +128,11 @@ register.import = async (context, input) => {
         `, [streamerId, name, communityId, liveId]);
 
         // 구독 정보 추가
-        await db.addSubscription(channel.id, streamerId);
+        let notifyType = 'all';
+        if (isInteraction) {
+            notifyType = context.options.getString('종류') || 'all';
+        }
+        await db.addSubscription(channel.id, streamerId, notifyType);
 
         const exampleEmbed = new EmbedBuilder()
             .setColor(isLive ? 0x00FF00 : 0x0099FF)
