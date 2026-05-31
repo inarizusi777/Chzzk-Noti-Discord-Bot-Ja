@@ -39,7 +39,7 @@
 3. **명령어 자동 배포 지원**
    - 디스코드의 최신 슬래시 명령어(Slash Commands) 규격을 완벽 지원하며, 스크립트를 통해 슬래시 명령어를 디스코드 API에 원클릭으로 쉽게 등록할 수 있습니다.
 4. **ARM64 환경 완벽 지원**
-   - Oracle Cloud Ubuntu ARM64 (Ampere® Altra®)를 비롯한 모든 서버 환경(Linux, macOS, Windows)에서 호환됩니다.
+   - ARM 프로세스를 비롯한 모든 서버 환경(Linux, macOS, Windows)에서 호환됩니다.
 
 ---
 
