@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 /**
- * 탐지 회피를 위한 랜덤 지연 (0.1s ~ 0.3s)
+ * Add a random delay of 0.1 to 0.3 seconds between requests.
  */
 const sleep = () => {
     const ms = Math.floor(Math.random() * 201) + 100;
@@ -9,9 +9,9 @@ const sleep = () => {
 };
 
 /**
- * 치지직 API 호출 유틸리티 (로컬 직접 통신 전용)
- * @param {string} path API 경로
- * @param {object} options Axios 옵션
+ * Utility for making direct requests to the CHZZK API.
+ * @param {string} path API path
+ * @param {object} options Axios options
  */
 async function fetchNaverApi(path, options = {}) {
     const isNngMain = path.startsWith('/nng_main');

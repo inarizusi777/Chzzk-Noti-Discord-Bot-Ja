@@ -7,15 +7,15 @@ message_set.execute = async (context) => {
     const channel = context.channel;
     const isInteraction = !!context.isChatInputCommand;
     
-    if (!isInteraction) return; // 슬래시 명령어로만 작동
+    if (!isInteraction) return; // This command only works with slash commands.
 
     try {
-        const streamerInput = context.options.getString('스트리머');
-        const type = context.options.getString('종류');
-        const mentionRole = context.options.getRole('멘션역할');
-        const customMessage = context.options.getString('메시지') || null;
+        const streamerInput = context.options.getString('streamer');
+        const type = context.options.getString('type');
+        const mentionRole = context.options.getRole('mention_role');
+        const customMessage = context.options.getString('message') || null;
 
-        // 스트리머 찾기
+        // Find the streamer.
         let streamerId = streamerInput;
         const isIdFormat = /^[a-f0-9]{32}$/.test(streamerInput);
         if (!isIdFormat) {
@@ -23,19 +23,19 @@ message_set.execute = async (context) => {
             if (searchResult.result === 200) {
                 streamerId = searchResult.id;
             } else {
-                return await context.reply(`'${streamerInput}' 스트리머를 찾을 수 없습니다. 정확한 닉네임을 입력해주세요.`);
+                return await context.reply(`配信者「${streamerInput}」が見つかりません。名前を確認して、もう一度お試しください。`);
             }
         }
 
-        // 해당 채널에 등록된 스트리머인지 확인
+        // Check whether the streamer is registered in this channel.
         const subs = await db.getSubscriptionsForChannel(channel.id);
         const streamerSub = subs.find(s => s.streamer_id === streamerId);
         
         if (!streamerSub) {
-            return await context.reply(`이 채널에 등록되지 않은 스트리머입니다. 먼저 '/등록'을 이용해 스트리머를 등록해주세요.`);
+            return await context.reply("この配信者はこのチャンネルに登録されていません。先に /register で登録してください。");
         }
 
-        // 멘션 타입 결정
+        // Determine the mention type.
         let finalMentionType = 'none';
         let finalMentionRoleId = null;
 
@@ -48,27 +48,27 @@ message_set.execute = async (context) => {
             }
         }
 
-        // DB 업데이트
+        // Update the database.
         await db.updateSubscriptionConfig(channel.id, streamerId, type, finalMentionType, finalMentionRoleId, customMessage);
 
-        // 성공 메시지 작성
-        const typeKor = type === 'community' ? '커뮤니티' : '방송시작';
-        let mentionStr = '멘션 없음';
+        // Build the confirmation message.
+        const notificationType = type === 'community' ? 'コミュニティ' : '配信開始';
+        let mentionStr = 'メンションなし';
         if (finalMentionType === '@everyone') mentionStr = '@everyone';
         else if (finalMentionType === '@here') mentionStr = '@here';
         else if (finalMentionType === 'role') mentionStr = `<@&${finalMentionRoleId}>`;
 
-        let msgStr = customMessage || '(기본 메시지 사용)';
+        let msgStr = customMessage || '（デフォルトメッセージ）';
 
-        const successMsg = `✅ **${streamerSub.name}** 스트리머의 **${typeKor}** 알림 설정이 변경되었습니다.\n- **멘션:** ${mentionStr}\n- **메시지:** ${msgStr}`;
+        const successMsg = `✅ **${streamerSub.name}** の **${notificationType}** 通知設定を更新しました。\n- **メンション:** ${mentionStr}\n- **メッセージ:** ${msgStr}`;
         await context.reply(successMsg);
         
-        util.importLog(`${channel.id} 채널에서 ${streamerId} 알림메시지설정 완료`);
+        util.importLog(`Updated notification settings for ${streamerId} in channel ${channel.id}`);
 
     } catch (err) {
-        console.error(`[${channel.id}] message_set 에러:`, err.message);
-        util.importLog(`${channel.id} 채널에서 알림메시지설정 중 에러 발생: ${err.message}`);
-        await context.reply('설정 중 오류가 발생했습니다.');
+        console.error(`[${channel.id}] Notification settings error:`, err.message);
+        util.importLog(`Error updating notification settings in channel ${channel.id}: ${err.message}`);
+        await context.reply('通知設定の更新中にエラーが発生しました。');
     }
 }
 
